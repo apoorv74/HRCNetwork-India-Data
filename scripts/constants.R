@@ -1,12 +1,19 @@
 
 pages_to_scrape <-  30000# Enter in multiples of 10
-page_num_xpath <-
-  data.frame("page_num" = c(c(1:10), c(11:pages_to_scrape)),
-             "xpath_num" = c(c(2:11), rep(c(3:12), length(
-               c(11:pages_to_scrape)
-             ) / 10)))
+
+# This is replaced by creating a global variable - all_pages - to get the xpath of the next page
+# page_num_xpath <-
+#   data.frame("page_num" = c(c(1:10), c(11:pages_to_scrape)),
+#              "xpath_num" = c(c(2:11), rep(c(3:12), length(
+#                c(11:pages_to_scrape)
+#              ) / 10)))
 
 view_more_page_nums <- c(1,100,seq(150,30000,50))
+
+from_date <- as.Date("01012020","%d%m%Y")
+to_date <- as.Date("31122020","%d%m%Y")
+dates_2020 <- seq.Date(from = from_date, to = to_date,by = 1)
+dates_2020 <- format(dates_2020,"%d%m%Y")
 
 # xpath values for the case_details page
 
@@ -79,6 +86,8 @@ get_case_table <- function() {
   case_meta_table <- case_meta_table$getPageSource()
   case_meta_table <-
     read_html(x = case_meta_table %>% unlist()) %>% html_table() %>% pluck(1)
+  all_pages <<- case_meta_table[nrow(case_meta_table),] %>% unlist()
+  all_pages <<- all_pages[!is.na(all_pages)] %>% unname()
   case_meta_table <- case_meta_table[1:20, 2:7]
   case_meta_table$id <- 1:nrow(case_meta_table)
   return(case_meta_table)
