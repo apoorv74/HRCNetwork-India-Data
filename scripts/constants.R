@@ -100,7 +100,7 @@ get_case_details <- function(html_string, case_meta_element_xpath){
 }
 
 
-get_action_details <- function(total_rows){
+get_action_details <- function(action_details_page, total_rows){
   action_details_all <- c()
   for(k in 1:total_rows){
     action_details_xpath <- glue::glue('/html/body/form/div[5]/div[2]/div/div/div/div[2]/div/div[1]/div[2]/div[2]/div/div[2]/div[1]/div/div[3]/div/div/span/div[{k}]/table')
