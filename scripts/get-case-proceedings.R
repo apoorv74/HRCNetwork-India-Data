@@ -8,6 +8,7 @@ library(RSelenium)
 library(glue)
 library(readr)
 library(netstat)
+library(tidyr)
 
 # User Agent
 user_agent <- "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
@@ -30,7 +31,7 @@ case_details_url <- "https://hrcnet.nic.in/HRCNet/public/CaseStatus.aspx"
 case_search_url <- "https://hrcnet.nic.in/HRCNet/public/SearchComplaint.aspx"
 remDr$navigate(case_search_url)
 
-i <- 1
+i <- 30
 for(i in 1:length(case_numbers)){
   if(i > 1){
     # Switch Windows
@@ -52,23 +53,6 @@ for(i in 1:length(case_numbers)){
   search_element <- remDr$findElement(using = "id","ContentPlaceHolder1_btnSearch")
   search_element$clickElement()
   
-  # form_vals <- read_html(x = remDr$getPageSource()[[1]]) %>% html_form() %>% pluck(1)
-  # view_state <- form_vals$fields$`__VIEWSTATE`$value
-  # view_state_gen <- form_vals$fields$`__VIEWSTATEGENERATOR`$value
-  # event_val <- form_vals$fields$`__EVENTVALIDATION`$value
-  # event_target <- "ctl00$ContentPlaceHolder1$GridViewSearResult$ctl02$LinkButton1"
-  #   
-  # vals  <- list(
-  #   "__EVENTTARGET" = event_target,
-  #   "__VIEWSTATE" = view_state,
-  #   "__VIEWSTATEGENERATOR" = view_state_gen,
-  #   "__EVENTVALIDATION" = event_val,
-  #   "ctl00$ContentPlaceHolder1$DropDownHRC" = 0,
-  #   "ctl00$ContentPlaceHolder1$cbo_Incident_State" = "SELECT",
-  #   "ctl00$ContentPlaceHolder1$cbo_actionStatus" = "0",
-  #   "ctl00$ContentPlaceHolder1$textFileNo" = case_num_i
-  # )
-  
   # Click on the case number
   case_details_page_xpath <- '//*[@id="ContentPlaceHolder1_GridViewSearResult_LinkButton1_0"]'
   case_details_page <- remDr$findElement(using = "xpath",value = case_details_page_xpath)
@@ -78,16 +62,9 @@ for(i in 1:length(case_numbers)){
   web_page_id <- remDr$getWindowHandles()[[2]]
   remDr$switchToWindow(windowId = web_page_id)
 
-  # # Send a POST reqest
-  # case_details_POST <- POST(url = case_search_url,
-  #                           body = vals,
-  #                           add_headers("User-Agent" = user_agent))
-  # 
-  # case_details_GET <-
-  #   GET(url = case_details_url, add_headers("User-Agent" = user_agent))
-  
   case_details_html <- remDr$getPageSource() %>% pluck(1)
   all_actions <- c()
+  action_details <- c()
   list_of_actions <-
     case_details_html %>% read_html() %>% html_nodes(css = '#ContentPlaceHolder1_gridActionList') %>% html_table %>% pluck(1) 
   total_rows <- nrow(list_of_actions)
@@ -105,9 +82,24 @@ for(i in 1:length(case_numbers)){
       list_of_actions <- actions_html %>% read_html() %>% html_nodes(css = '#ContentPlaceHolder1_gridActionList') %>% html_table %>% pluck(1) 
       }
       total_rows <- nrow(list_of_actions) - 2
+      sleep_time <- total_rows
       list_of_actions_j <- list_of_actions[1:total_rows, 1:4]
       all_actions <-
         dplyr::bind_rows(all_actions, list_of_actions_j)
+      
+      # Click on Expand All Action List
+      expand_action_xpath <- '//*[@id="ContentPlaceHolder1_lnkExpandAllAction"]'
+      expand_action_xpath_element <- remDr$findElement(using = "xpath", value = expand_action_xpath)
+      expand_action_xpath_element$clickElement()
+
+      # Sleep
+      Sys.sleep(sleep_time)
+      
+      # Fetch all action details
+      action_details_html <- remDr$getPageSource() %>% pluck(1)
+      action_details_page <- get_action_details(total_rows)
+      action_details <- dplyr::bind_rows(action_details, action_details_page) 
+      
       if (j < total_pages) {
         next_action_list_page_xpath <-
           glue::glue(
@@ -116,16 +108,25 @@ for(i in 1:length(case_numbers)){
         next_action_list_page <-
           remDr$findElement(using = "xpath", value = next_action_list_page_xpath)
         next_action_list_page$clickElement()
-        Sys.sleep(2)    
+        Sys.sleep(4)    
       }
     }
   } else {
     list_of_actions_j <- list_of_actions[1:total_rows, 1:4]
     all_actions <-
       dplyr::bind_rows(all_actions, list_of_actions_j)
+    
+    # Click on Expand All Action List
+    expand_action_xpath <- '//*[@id="ContentPlaceHolder1_lnkExpandAllAction"]'
+    expand_action_xpath_element <- remDr$findElement(using = "xpath", value = expand_action_xpath)
+    expand_action_xpath_element$clickElement()
+    
+    # Sleep
+    Sys.sleep(sleep_time)
+    
+    # Fetch all action details
+    action_details_html <- remDr$getPageSource() %>% pluck(1)
+    action_details_page <- get_action_details(total_rows)
+    action_details <- dplyr::bind_rows(action_details, action_details_page) 
   }
-  
-
-  case_details_list[[xpath_df$element_name[j]]] <- list_of_actions
-  
-}
+  }

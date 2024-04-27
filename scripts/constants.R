@@ -100,3 +100,18 @@ get_case_details <- function(html_string, case_meta_element_xpath){
 }
 
 
+get_action_details <- function(total_rows){
+  action_details_all <- c()
+  for(k in 1:total_rows){
+    action_details_xpath <- glue::glue('/html/body/form/div[5]/div[2]/div/div/div/div[2]/div/div[1]/div[2]/div[2]/div/div[2]/div[1]/div/div[3]/div/div/span/div[{k}]/table')
+    action_title_xpath <- glue::glue('/html/body/form/div[5]/div[2]/div/div/div/div[2]/div/div[1]/div[2]/div[2]/div/div[2]/div[1]/div/div[3]/div/div/span/h4[{k}]')
+    action_title_k <- action_details_html %>% read_html() %>% html_nodes(xpath=action_title_xpath) %>% html_text()
+    action_title_k <- stringr::str_replace_all(string = action_title_k, pattern = "Action :",replacement = "") %>% stringr::str_trim()
+    action_details_k <- action_details_html %>% read_html() %>% html_nodes(xpath=action_details_xpath) %>% html_table() %>% pluck(1)
+    action_details_k <- action_details_k[,c(1:2)]
+    action_details_k <- action_details_k %>% tidyr::pivot_wider(names_from = X1, values_from = X2)
+    action_details_k$action <- action_title_k
+    action_details_all <- dplyr::bind_rows(action_details_all, action_details_k)
+  } 
+  return(action_details_all)
+}
