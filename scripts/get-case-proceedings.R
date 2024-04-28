@@ -139,3 +139,29 @@ for(i in 1:length(case_numbers)){
   readr::write_csv(action_details, file_title_action_details)
   
 }
+
+# Create a master file for storing action details for all cases -----------
+base_file_path <- "data/nhrc_data_2020/case_actions"
+case_action_list_master <- c()
+case_action_details_master <- c()
+for(i in 1:length(case_numbers)){
+  print(i)
+  case_num_x <- case_numbers[i]
+  case_action_list_file_path <- glue::glue("{base_file_path}/action_list/case_{i}_action_list.csv")
+  case_action_details_file_path <- glue::glue("{base_file_path}/action_details/case_{i}_action_details.csv")
+  
+  cal_file <-
+    readr::read_csv(case_action_list_file_path, col_types = cols(.default = col_character()))
+  cal_file$case_file_number <- case_num_x
+  cal_file$case_number <- i
+  case_action_list_master <- dplyr::bind_rows(case_action_list_master, cal_file)  
+  
+  cad_file <- readr::read_csv(case_action_details_file_path, col_types = cols(.default = col_character()))
+  cad_file$case_file_number <- case_num_x
+  cad_file$case_number <- i
+  case_action_details_master <- dplyr::bind_rows(case_action_details_master, cad_file)
+}
+
+readr::write_csv(case_action_list_master, "data/nhrc_data_2020/all_case_action_lists.csv")
+readr::write_csv(case_action_details_master, "data/nhrc_data_2020/all_case_action_details.csv")
+
